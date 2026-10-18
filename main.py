@@ -219,6 +219,7 @@ class SpisokWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
+        self.setWindowTitle('Основное окно')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(60, 60, 60, 60)
         layout.setSpacing(15)
@@ -233,9 +234,8 @@ class SpisokWidget(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Авторизация")
         self.resize(450, 600)
-
+        self.setWindowTitle("Авторизация")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
@@ -254,18 +254,17 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.spisok_page)
 
     def switch_page(self, index):
+        if index == 0 or index == 1:
+            self.setWindowTitle("Авторизация")
+        elif index == 2:
+            self.setWindowTitle('Основное окно')
         self.stack.setCurrentIndex(index)
 
 
 if __name__ == '__main__':
-    # Включаем сглаживание шрифтов для красоты
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-
-    # Применяем глобальный стиль
     app.setStyleSheet(GLOBAL_STYLESHEET)
-
     window = MainWindow()
     window.show()
-
     sys.exit(app.exec_())
