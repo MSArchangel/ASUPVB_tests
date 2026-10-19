@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy)
 from PyQt5.QtCore import Qt
 
-# Единый стиль для всего приложения (Modern Light Theme)
+user_id, results = [None], [None]
 GLOBAL_STYLESHEET = """
     QMainWindow, QWidget {
         background-color: #F4F7F6;
@@ -141,10 +141,13 @@ class LoginWidget(QWidget):
         connection = sqlite3.connect(db_path)
 
         cursor = connection.cursor()
-        arr = cursor.execute("SELECT login, password FROM loggins").fetchall()
+        arr = cursor.execute("SELECT id, login, password FROM loggins").fetchall()
         if login_from_edit and password_from_edit:
-            for login, password in arr:
+            for id, login, password in arr:
                 if login == login_from_edit and password == password_from_edit:
+                    user_id[0] = id
+                    QMessageBox.information(self, "Подтверждение успешного входа",
+                                            "Вы успешно вошли в свою учётную запись!\nС возвращением!")
                     self.switch_callback(2)
                     fl = 1
             else:
@@ -226,9 +229,14 @@ class RegistrationWidget(QWidget):
                                          "Вы уверены, что хотите создать учётную запись с введенными данными?",
                                          QMessageBox.Yes | QMessageBox.No)
             if result == QMessageBox.Yes:
-                QMessageBox.information(self, "Подтверждение успешной регистрации", "Ваша учётная запись успешно создана!\nДобро пожаловать!")
-                cursor.execute("INSERT INTO loggins (login, password, results) VALUES (?, ?, ?)", (name_from_edit, password_from_edit, ""))
+                QMessageBox.information(self, "Подтверждение успешной регистрации",
+                                        "Ваша учётная запись успешно создана!\nДобро пожаловать!")
+                cursor.execute("INSERT INTO loggins (login, password, results) VALUES (?, ?, ?)",
+                               (name_from_edit, password_from_edit, ""))
                 connection.commit()
+                user_id[0] = [x for x in cursor.execute(
+                    f'SELECT id FROM loggins WHERE login = "{name_from_edit}" AND password = "{password_from_edit}"').fetchall()][
+                    0][0]
                 self.switch_callback(2)
             else:
                 pass
@@ -247,6 +255,9 @@ class SpisokWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
+        self.db_path = 'database_logins.db'
+        self.connection = sqlite3.connect(self.db_path)
+        self.cursor = self.connection.cursor()
         self.setWindowTitle('Основное окно')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(60, 60, 60, 60)
@@ -267,6 +278,7 @@ class SpisokWidget(QWidget):
         self.btn_graphik = QPushButton("Графики")
         self.btn_graphik.setObjectName("primary_btn")
         self.btn_graphik.setCursor(Qt.PointingHandCursor)
+        self.btn_graphik.clicked.connect(self.on_btn_graphic_click)
 
         layout.addStretch()
         layout.addWidget(title)
@@ -275,6 +287,56 @@ class SpisokWidget(QWidget):
         layout.addWidget(self.btn_graphik)
         layout.addStretch()
 
+    def on_btn_graphic_click(self):
+        global results
+        results = [int(a) for a in [x[0] for x in self.cursor.execute(
+            f'SELECT results FROM loggins WHERE id = "{user_id[0]}"').fetchall()][0].split()]
+
+        self.switch_callback(3)
+
+
+class GraphikWidget(QWidget):
+    def __init__(self, switch_callback):
+        super().__init__()
+        self.db_path = 'database_logins.db'
+        self.connection = sqlite3.connect(self.db_path)
+        self.cursor = self.connection.cursor()
+        self.switch_callback = switch_callback
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('Графики о прохождении тестов')
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(60, 60, 60, 60)
+        layout.setSpacing(15)
+        layout.addStretch()
+
+        self.label = QLabel("Нажмите на кнопку ниже, чтобы посторить график:")
+
+        self.btn_back = QPushButton("Вернуться назад <-")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
+
+        self.btn_to_create = QPushButton("Построить график!")
+        self.btn_to_create.setCursor(Qt.PointingHandCursor)
+        self.btn_to_create.clicked.connect(self.on_btn_to_create_click)
+
+        layout.addWidget(self.btn_back)
+        layout.addWidget(self.label)
+        layout.addWidget(self.btn_to_create)
+
+        layout.addStretch()
+
+    def on_btn_back_click(self):
+        self.label.setText("Нажмите на кнопку ниже, чтобы посторить график:")
+        self.switch_callback(2)
+
+    def on_btn_to_create_click(self):
+        if len(results) >= 2:
+            self.label.setText("График ваших результатов")
+        else:
+            self.label.setText(
+                "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -293,16 +355,20 @@ class MainWindow(QMainWindow):
         self.login_page = LoginWidget(self.switch_page)
         self.reg_page = RegistrationWidget(self.switch_page)
         self.spisok_page = SpisokWidget(self.switch_page)
+        self.graphik_page = GraphikWidget(self.switch_page)
 
         self.stack.addWidget(self.login_page)
         self.stack.addWidget(self.reg_page)
         self.stack.addWidget(self.spisok_page)
+        self.stack.addWidget(self.graphik_page)
 
     def switch_page(self, index):
         if index == 0 or index == 1:
             self.setWindowTitle("Авторизация")
         elif index == 2:
             self.setWindowTitle('Основное окно')
+        elif index == 3:
+            self.setWindowTitle('Аналитика прохождения')
         self.stack.setCurrentIndex(index)
 
 
