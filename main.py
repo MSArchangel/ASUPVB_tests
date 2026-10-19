@@ -1,4 +1,4 @@
-import sys
+import sys, sqlite3
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QMessageBox,
                              QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy)
@@ -133,16 +133,29 @@ class LoginWidget(QWidget):
         self.input_password.returnPressed.connect(self.check_login)
 
     def check_login(self):
-        login = self.input_login.text().strip()
-        password = self.input_password.text().strip()
+        login_from_edit = self.input_login.text().strip()
+        password_from_edit = self.input_password.text().strip()
+        fl = 0
 
-        if login and password:
-            self.switch_callback(2)
+        db_path = 'database_logins.db'
+        connection = sqlite3.connect(db_path)
+
+        cursor = connection.cursor()
+        arr = cursor.execute("SELECT login, password FROM loggins").fetchall()
+        if login_from_edit and password_from_edit:
+            for login, password in arr:
+                if login == login_from_edit and password == password_from_edit:
+                    self.switch_callback(2)
+                    fl = 1
+            else:
+                if fl == 0:
+                    QMessageBox.warning(self, 'Ошибка входа',
+                                        'Пожалуйста, проверьте правильность ввода данных, данные в БД отсутствуют!')
         else:
             QMessageBox.warning(self, 'Ошибка входа', 'Пожалуйста, заполните все поля!')
-            if not login:
+            if not login_from_edit:
                 self.input_login.setFocus()
-            elif not password:
+            elif not password_from_edit:
                 self.input_password.setFocus()
 
 
@@ -201,16 +214,29 @@ class RegistrationWidget(QWidget):
         self.input_password.returnPressed.connect(self.check_registration)
 
     def check_registration(self):
-        name = self.input_name.text().strip()
-        password = self.input_password.text().strip()
+        name_from_edit = self.input_name.text().strip()
+        password_from_edit = self.input_password.text().strip()
 
-        if name and password:
-            self.switch_callback(2)
+        db_path = 'database_logins.db'
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+
+        if (name_from_edit and password_from_edit) and len(password_from_edit) >= 6:
+            result = QMessageBox.warning(self, "Предупреждение",
+                                         "Вы уверены, что хотите создать учётную запись с введенными данными?",
+                                         QMessageBox.Yes | QMessageBox.No)
+            if result == QMessageBox.Yes:
+                QMessageBox.information(self, "Подтверждение успешной регистрации", "Ваша учётная запись успешно создана!\nДобро пожаловать!")
+                cursor.execute("INSERT INTO loggins (login, password, results) VALUES (?, ?, ?)", (name_from_edit, password_from_edit, ""))
+                connection.commit()
+                self.switch_callback(2)
+            else:
+                pass
         else:
             QMessageBox.warning(self, 'Ошибка входа', 'Пожалуйста, заполните все поля!')
-            if not name:
+            if not name_from_edit:
                 self.input_name.setFocus()
-            elif not password:
+            elif not password_from_edit:
                 self.input_password.setFocus()
 
 
@@ -226,17 +252,34 @@ class SpisokWidget(QWidget):
         layout.setContentsMargins(60, 60, 60, 60)
         layout.setSpacing(15)
 
-        title = QLabel("Создать аккаунт")
+        title = QLabel("Главное меню")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignCenter)
+
+        self.btn_theory = QPushButton("Теория")
+        self.btn_theory.setObjectName("primary_btn")
+        self.btn_theory.setCursor(Qt.PointingHandCursor)
+
+        self.btn_tests = QPushButton("Тесты")
+        self.btn_tests.setObjectName("primary_btn")
+        self.btn_tests.setCursor(Qt.PointingHandCursor)
+
+        self.btn_graphik = QPushButton("Графики")
+        self.btn_graphik.setObjectName("primary_btn")
+        self.btn_graphik.setCursor(Qt.PointingHandCursor)
+
         layout.addStretch()
         layout.addWidget(title)
+        layout.addWidget(self.btn_theory)
+        layout.addWidget(self.btn_tests)
+        layout.addWidget(self.btn_graphik)
+        layout.addStretch()
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.resize(450, 600)
+        self.resize(650, 800)
         self.setWindowTitle("Авторизация")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
