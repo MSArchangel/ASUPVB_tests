@@ -129,6 +129,7 @@ class LoginWidget(QWidget):
 
         self.btn_login.clicked.connect(self.check_login)
         self.btn_to_reg.clicked.connect(lambda: self.switch_callback(1))
+        self.input_login.returnPressed.connect(self.check_login)
         self.input_password.returnPressed.connect(self.check_login)
 
     def check_login(self):
@@ -196,6 +197,7 @@ class RegistrationWidget(QWidget):
 
         self.btn_register.clicked.connect(self.check_registration)
         self.btn_to_login.clicked.connect(lambda: self.switch_callback(0))
+        self.input_name.returnPressed.connect(self.check_registration)
         self.input_password.returnPressed.connect(self.check_registration)
 
     def check_registration(self):
