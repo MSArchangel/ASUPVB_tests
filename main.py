@@ -5,8 +5,9 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from graph_test import get_results
+from CHS_for_theory import EMERGENCY_DATA
 
-user_id, results = [None], [None]
+user_id, results, IMAGES, SCHETCHIK_FOR_IMAGES = [None], [None], EMERGENCY_DATA, [0]
 GLOBAL_STYLESHEET = """
     QMainWindow, QWidget {
         background-color: #F4F7F6;
@@ -18,13 +19,19 @@ GLOBAL_STYLESHEET = """
         font-size: 26px;
         font-weight: 600;
         color: #2D3436;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
 
     QLabel#subtitle {
         font-size: 18px;
         color: #636E72;
         margin-bottom: 20px;
+    }
+    
+    QLabel#subtitle_images {
+        font-size: 12px;
+        color: #636E72;
+        margin-left: 250px;
     }
 
     QLineEdit {
@@ -272,6 +279,7 @@ class SpisokWidget(QWidget):
         self.btn_theory = QPushButton("Теория")
         self.btn_theory.setObjectName("primary_btn")
         self.btn_theory.setCursor(Qt.PointingHandCursor)
+        self.btn_theory.clicked.connect(self.on_btn_theory_click)
 
         self.btn_tests = QPushButton("Тесты")
         self.btn_tests.setObjectName("primary_btn")
@@ -293,8 +301,10 @@ class SpisokWidget(QWidget):
         global results
         results = [int(a) for a in [x[0] for x in self.cursor.execute(
             f'SELECT results FROM loggins WHERE id = "{user_id[0]}"').fetchall()][0].split()]
-
         self.switch_callback(3)
+
+    def on_btn_theory_click(self):
+        self.switch_callback(4)
 
 
 class GraphikWidget(QWidget):
@@ -346,6 +356,79 @@ class GraphikWidget(QWidget):
                 "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
 
 
+class TheoryWidget(QWidget):
+    def __init__(self, switch_callback):
+        super().__init__()
+        self.init_ui()
+        self.switch_callback = switch_callback
+
+    def init_ui(self):
+        self.setWindowTitle('Теория')
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(60, 60, 60, 60)
+        layout.setSpacing(15)
+        layout.addStretch()
+
+        self.chs_title = QLabel(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
+        self.chs_title.setObjectName("title")
+        self.chs_title.setAlignment(Qt.AlignCenter)
+
+        self.label_image = QLabel()
+        self.label_image.setFixedSize(800, 600)
+        pixmap = QPixmap(f"IMAGES/{IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][0]}")
+        self.label_image.setPixmap(pixmap)
+        self.label_image.setScaledContents(True)
+
+        self.text_label = QLabel(IMAGES[SCHETCHIK_FOR_IMAGES[0]][1])
+        self.text_label.setObjectName("subtitle_images")
+        self.text_label.setAlignment(Qt.AlignJustify)
+
+        self.btn_next = QPushButton("->")
+        self.btn_next.setCursor(Qt.PointingHandCursor)
+        self.btn_next.clicked.connect(self.on_btn_next_click)
+        self.btn_next.setFixedSize(60, 30)
+
+        self.btn_back = QPushButton("<-")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
+        self.btn_back.setFixedSize(60, 30)
+
+        self.btn_back_to_main_menu = QPushButton("Вернуться назад <-")
+        self.btn_back_to_main_menu.setCursor(Qt.PointingHandCursor)
+        self.btn_back_to_main_menu.clicked.connect(self.on_btn_back_to_main_menu_click)
+
+        h_layout = QHBoxLayout(self)
+        h_layout.addWidget(self.btn_back)
+        h_layout.addWidget(self.btn_next)
+
+        layout.addWidget(self.chs_title)
+        layout.addWidget(self.label_image)
+        layout.addWidget(self.text_label)
+        layout.addLayout(h_layout)
+        layout.addWidget(self.btn_back_to_main_menu)
+
+        layout.addStretch()
+
+    def on_btn_back_to_main_menu_click(self):
+        self.switch_callback(2)
+
+    def on_btn_next_click(self):
+        SCHETCHIK_FOR_IMAGES[0] += 1
+        pixmap = QPixmap(f"IMAGES/{IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][0]}")
+        self.chs_title.setText(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
+        self.text_label.setText(IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][1])
+        self.label_image.setPixmap(pixmap)
+        self.label_image.setScaledContents(True)
+
+    def on_btn_back_click(self):
+        SCHETCHIK_FOR_IMAGES[0] -= 1
+        pixmap = QPixmap(f"IMAGES/{IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][0]}")
+        self.chs_title.setText(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
+        self.text_label.setText(IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][1])
+        self.label_image.setPixmap(pixmap)
+        self.label_image.setScaledContents(True)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -364,11 +447,13 @@ class MainWindow(QMainWindow):
         self.reg_page = RegistrationWidget(self.switch_page)
         self.spisok_page = SpisokWidget(self.switch_page)
         self.graphik_page = GraphikWidget(self.switch_page)
+        self.theory_page = TheoryWidget(self.switch_page)
 
         self.stack.addWidget(self.login_page)
         self.stack.addWidget(self.reg_page)
         self.stack.addWidget(self.spisok_page)
         self.stack.addWidget(self.graphik_page)
+        self.stack.addWidget(self.theory_page)
 
     def switch_page(self, index):
         if index == 0 or index == 1:
@@ -377,6 +462,8 @@ class MainWindow(QMainWindow):
             self.setWindowTitle('Основное окно')
         elif index == 3:
             self.setWindowTitle('Аналитика прохождения')
+        elif index == 4:
+            self.setWindowTitle('Теория')
         self.stack.setCurrentIndex(index)
 
 
