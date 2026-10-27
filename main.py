@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QMessageBox,
                              QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy)
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from graph_test import get_results
 
 user_id, results = [None], [None]
 GLOBAL_STYLESHEET = """
@@ -20,7 +22,7 @@ GLOBAL_STYLESHEET = """
     }
 
     QLabel#subtitle {
-        font-size: 14px;
+        font-size: 18px;
         color: #636E72;
         margin-bottom: 20px;
     }
@@ -30,7 +32,7 @@ GLOBAL_STYLESHEET = """
         border: 1px solid #DFE6E9;
         border-radius: 8px;
         padding: 12px;
-        font-size: 14px;
+        font-size: 20px;
         color: #2D3436;
         selection-background-color: #74B9FF;
     }
@@ -47,7 +49,7 @@ GLOBAL_STYLESHEET = """
         border: none;
         border-radius: 8px;
         padding: 12px;
-        font-size: 15px;
+        font-size: 20px;
         font-weight: bold;
     }
     QPushButton#primary_btn:hover {
@@ -312,6 +314,7 @@ class GraphikWidget(QWidget):
         layout.addStretch()
 
         self.label = QLabel("Нажмите на кнопку ниже, чтобы посторить график:")
+        self.label.setFixedSize(800, 700)
 
         self.btn_back = QPushButton("Вернуться назад <-")
         self.btn_back.setCursor(Qt.PointingHandCursor)
@@ -334,14 +337,19 @@ class GraphikWidget(QWidget):
     def on_btn_to_create_click(self):
         if len(results) >= 2:
             self.label.setText("График ваших результатов")
+            get_results()
+            pixmap = QPixmap("test_results_light.png")
+            self.label.setPixmap(pixmap)
+            self.label.setScaledContents(True)
         else:
             self.label.setText(
                 "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.resize(650, 800)
+        self.resize(850, 1000)
         self.setWindowTitle("Авторизация")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -379,4 +387,3 @@ if __name__ == '__main__':
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
-
