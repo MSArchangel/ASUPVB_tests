@@ -1,90 +1,292 @@
 import sys, sqlite3
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy)
+                             QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy, QFrame,
+                             QGraphicsDropShadowEffect, QScrollArea)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QColor
 from graph_test import get_results
 from CHS_for_theory import EMERGENCY_DATA
 
 user_id, results, IMAGES, SCHETCHIK_FOR_IMAGES = [None], [None], EMERGENCY_DATA, [0]
 GLOBAL_STYLESHEET = """
-    QMainWindow, QWidget {
-        background-color: #F4F7F6;
-        font-family: 'Segoe UI', 'Arial', sans-serif;
-        color: #2D3436;
-    }
+QMainWindow, QWidget {
+    background-color: #F4F7F6;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    color: #2D3436;
+}
 
-    QLabel#title {
-        font-size: 26px;
-        font-weight: 600;
-        color: #2D3436;
-        margin-bottom: 5px;
-    }
+QFrame#card {
+    background-color: #FFFFFF;
+    border: 1px solid #E3EAEF;
+    border-radius: 20px;
+}
 
-    QLabel#subtitle {
-        font-size: 18px;
-        color: #636E72;
-        margin-bottom: 20px;
-    }
-    
-    QLabel#subtitle_images {
-        font-size: 12px;
-        color: #636E72;
-        margin-left: 250px;
-    }
+QLabel#title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1E2A38;
+    margin-bottom: 5px;
+    background-color: #FFFFFF;
+}
 
-    QLineEdit {
-        background-color: #FFFFFF;
-        border: 1px solid #DFE6E9;
-        border-radius: 8px;
-        padding: 12px;
-        font-size: 20px;
-        color: #2D3436;
-        selection-background-color: #74B9FF;
-    }
-    QLineEdit:focus {
-        border: 1px solid #0984E3;
-    }
-    QLineEdit::placeholder {
-        color: #B2BEC3;
-    }
+QLabel#logo {
+    font-size: 64px;
+    background: transparent;
+    margin-bottom: 6px;
+}
+QLabel#subtitle {
+    font-size: 16px;
+    color: #7B8A97;
+    font-style: italic;
+    margin-bottom: 22px;
+    background-color: #FFFFFF
+}
+QLineEdit::placeholder {
+    color: #B2BEC3;
+    font-style: italic;
+}
+QLabel#hint_text {
+    font-size: 12px;
+    color: #90A4AE;
+    margin-top: -8px;
+}
+QLabel#error_text {
+    font-size: 13px;
+    color: #D63031;
+    font-weight: 600;
+    background-color: #FDECEA;
+    border: 1px solid #F5C6C0;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+QLabel#footer_text {
+    font-size: 12px;
+    color: #B2BEC3;
+    margin-top: 10px;
+}
 
-    QPushButton#primary_btn {
-        background-color: #CC5500;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px;
-        font-size: 20px;
-        font-weight: bold;
-    }
-    QPushButton#primary_btn:hover {
-        background-color: green;
-    }
-    QPushButton#primary_btn:pressed {
-        background-color: #0662A6;
-    }
-    
-    QPushButton#secondary_btn {
-        background-color: transparent;
-        color: #0984E3;
-        border: none;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    QPushButton#secondary_btn:hover {
-        color: #0874C3;
-        text-decoration: underline;
-    }
+/* ── Текст: тело теории (панель с акцентной полосой) ── */
+QLabel#theory_text {
+    font-size: 15px;
+    color: #3D4C59;
+    background-color: #F8FAFB;
+    border: 1px solid #E3EAEF;
+    border-left: 4px solid #FF8A3D;
+    border-radius: 10px;
+    padding: 18px 22px;
+}
 
-    QLabel#result_text {
-        font-size: 15px;
-        color: #00B894;
-        font-weight: 500;
-        margin-top: 10px;
-    }
+/* ── Текст: подсказки и заглушки (графики и т.п.) ── */
+QLabel#info_text {
+    font-size: 16px;
+    color: #636E72;
+    background: transparent;
+}
+
+/* ── Диалоговые окна QMessageBox в общем стиле ── */
+QMessageBox {
+    background-color: #FFFFFF;
+}
+QMessageBox QLabel {
+    font-size: 15px;
+    color: #2D3436;
+}
+QMessageBox QPushButton {
+    background-color: #F1F5F8;
+    color: #2D3436;
+    border: 1px solid #DFE6E9;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 90px;
+}
+QMessageBox QPushButton:hover {
+    background-color: #EAF4FD;
+    border-color: #0984E3;
+    color: #0984E3;
+}
+
+QLabel#result_text {
+    font-size: 15px;
+    color: #00B894;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+QLineEdit {
+    background-color: #F8FAFB;
+    border: 1.5px solid #DFE6E9;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 18px;
+    color: #2D3436;
+    selection-background-color: #74B9FF;
+}
+QLineEdit:focus {
+    border: 1.5px solid #0984E3;
+    background-color: #FFFFFF;
+}
+QLineEdit::placeholder { color: #B2BEC3; }
+
+QPushButton#primary_btn {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #FF8A3D, stop:1 #E06000);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 19px;
+    font-weight: 600;
+}
+QPushButton#primary_btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #FF9C55, stop:1 #F06E00);
+}
+QPushButton#primary_btn:pressed {
+    background: #C25400;
+    padding-top: 14px;
+    padding-bottom: 12px;
+}
+QPushButton#primary_btn:disabled {
+    background: #CFD8DC;
+    color: #90A4AE;
+}
+
+QPushButton#nav_btn {
+    background-color: #FFFFFF;
+    border: 2px solid #DFE6E9;
+    border-radius: 15px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0984E3;
+}
+QPushButton#nav_btn:hover {
+    border-color: #0984E3;
+    background-color: #EAF4FD;
+}
+QPushButton#nav_btn:pressed { background-color: #D4E9FB; }
+
+
+QPushButton#back_btn {
+    background: transparent;
+    border: none;
+    color: #636E72;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 10px;
+}
+QPushButton#back_btn:hover { color: #0984E3; }
+
+QPushButton#secondary_btn {
+    background-color: transparent;
+    color: #0984E3;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+}
+QPushButton#secondary_btn:hover {
+    color: #0874C3;
+    text-decoration: underline;
+}
+
+QScrollArea { border: none; background: transparent; }
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 2px 4px 0;
+}
+QScrollBar::handle:vertical {
+    background: #C4D0DA;
+    border-radius: 5px;
+    min-height: 40px;
+}
+QScrollBar::handle:vertical:hover { background: #9FB0BE; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+
+QRadioButton {
+    spacing: 12px;
+    font-size: 16px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    background-color: #F8FAFB;
+}
+QRadioButton:hover { border-color: #B9D7F2; background-color: #F0F7FD; }
+QRadioButton:checked { border-color: #0984E3; background-color: #EAF4FD; }
+QRadioButton::indicator {
+    width: 18px; height: 18px;
+    border-radius: 9px;
+    border: 2px solid #B9C6D2;
+    background: #FFFFFF;
+}
+QRadioButton::indicator:checked {
+    border-color: #0984E3;
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                stop:0 #0984E3, stop:0.5 #0984E3, stop:0.51 #FFFFFF);
+}
+QProgressBar {
+    background: #E4EBEF;
+    border: none;
+    border-radius: 7px;
+    height: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: #2D3436;
+}
+QProgressBar::chunk {
+    border-radius: 7px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #00B894, stop:1 #55EFC4);
+}
 """
+
+
+def build_card(parent: QWidget) -> QVBoxLayout:
+    outer = QVBoxLayout(parent)
+    outer.setContentsMargins(35, 35, 35, 35)
+
+    card = QFrame(parent)
+    card.setObjectName("card")
+
+    shadow = QGraphicsDropShadowEffect(parent)
+    shadow.setBlurRadius(35)
+    shadow.setColor(QColor(31, 45, 61, 45))
+    shadow.setOffset(0, 8)
+    card.setGraphicsEffect(shadow)
+
+    inner = QVBoxLayout(card)
+    inner.setContentsMargins(60, 60, 60, 60)
+    inner.setSpacing(15)
+
+    outer.addWidget(card)
+    return inner
+
+
+SECTION_COLORS = {
+    "⚠": "#E67E22",  # ОПАСНОСТЬ — оранжевый
+    "🔎": "#0984E3",  # ПРЕДВЕСТНИКИ — синий
+    "🚨": "#D63031",  # ПОРЯДОК ДЕЙСТВИЙ — красный
+}
+
+
+def pretty_theory_html(raw: str) -> str:
+    """Превращает сырой текст из EMERGENCY_DATA в аккуратный rich-text."""
+    html = ""
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        for emoji, color in SECTION_COLORS.items():
+            if s.startswith(emoji):
+                html += (f"<p style='font-size:16px; font-weight:700; color:{color}; "
+                         f"margin-top:12px; margin-bottom:2px;'>{s}</p>")
+                break
+        else:
+            indent = "margin-left:22px;" if line.startswith(" ") else ""
+            html += f"<p style='{indent} margin-top:1px; margin-bottom:1px;'>{s}</p>"
+    return html
 
 
 class LoginWidget(QWidget):
@@ -94,9 +296,7 @@ class LoginWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 60, 60, 60)
-        layout.setSpacing(15)
+        layout = build_card(self)
 
         title = QLabel("С возвращением!")
         title.setObjectName("title")
@@ -178,9 +378,7 @@ class RegistrationWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 60, 60, 60)
-        layout.setSpacing(15)
+        layout = build_card(self)
 
         title = QLabel("Создать аккаунт")
         title.setObjectName("title")
@@ -268,9 +466,7 @@ class SpisokWidget(QWidget):
         self.connection = sqlite3.connect(self.db_path)
         self.cursor = self.connection.cursor()
         self.setWindowTitle('Основное окно')
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 60, 60, 60)
-        layout.setSpacing(15)
+        layout = build_card(self)
 
         title = QLabel("Главное меню")
         title.setObjectName("title")
@@ -318,21 +514,24 @@ class GraphikWidget(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('Графики о прохождении тестов')
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 60, 60, 60)
-        layout.setSpacing(15)
+        layout = build_card(self)
         layout.addStretch()
 
-        self.label = QLabel("Нажмите на кнопку ниже, чтобы посторить график:")
+        self.label = QLabel("Нажмите на кнопку ниже, чтобы построить график:")
+        self.label.setObjectName("info_text")  # ✅ ново
+        self.label.setAlignment(Qt.AlignCenter)  # ✅ ново
         self.label.setFixedSize(800, 700)
+        self.label.setWordWrap(True)
 
         self.btn_back = QPushButton("Вернуться назад <-")
         self.btn_back.setCursor(Qt.PointingHandCursor)
         self.btn_back.clicked.connect(self.on_btn_back_click)
+        self.btn_back.setObjectName("back_btn")
 
         self.btn_to_create = QPushButton("Построить график!")
         self.btn_to_create.setCursor(Qt.PointingHandCursor)
         self.btn_to_create.clicked.connect(self.on_btn_to_create_click)
+        self.btn_to_create.setObjectName("primary_btn")
 
         layout.addWidget(self.btn_back)
         layout.addWidget(self.label)
@@ -364,9 +563,7 @@ class TheoryWidget(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('Теория')
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 60, 60, 60)
-        layout.setSpacing(15)
+        layout = build_card(self)
         layout.addStretch()
 
         self.chs_title = QLabel(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
@@ -379,23 +576,32 @@ class TheoryWidget(QWidget):
         self.label_image.setPixmap(pixmap)
         self.label_image.setScaledContents(True)
 
-        self.text_label = QLabel(IMAGES[SCHETCHIK_FOR_IMAGES[0]][1])
-        self.text_label.setObjectName("subtitle_images")
+        self.text_label = QLabel(pretty_theory_html(IMAGES[SCHETCHIK_FOR_IMAGES[0]][1]))
+        self.text_label.setObjectName("theory_text")
+        self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignJustify)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.text_label)
+        self.scroll.setFixedHeight(320)
 
         self.btn_next = QPushButton("->")
         self.btn_next.setCursor(Qt.PointingHandCursor)
         self.btn_next.clicked.connect(self.on_btn_next_click)
         self.btn_next.setFixedSize(60, 30)
+        self.btn_next.setObjectName("nav_btn")
 
         self.btn_back = QPushButton("<-")
         self.btn_back.setCursor(Qt.PointingHandCursor)
         self.btn_back.clicked.connect(self.on_btn_back_click)
         self.btn_back.setFixedSize(60, 30)
+        self.btn_back.setObjectName("nav_btn")
 
         self.btn_back_to_main_menu = QPushButton("Вернуться назад <-")
         self.btn_back_to_main_menu.setCursor(Qt.PointingHandCursor)
         self.btn_back_to_main_menu.clicked.connect(self.on_btn_back_to_main_menu_click)
+        self.btn_back_to_main_menu.setObjectName("back_btn")
 
         h_layout = QHBoxLayout(self)
         h_layout.addWidget(self.btn_back)
@@ -403,7 +609,7 @@ class TheoryWidget(QWidget):
 
         layout.addWidget(self.chs_title)
         layout.addWidget(self.label_image)
-        layout.addWidget(self.text_label)
+        layout.addWidget(self.scroll)
         layout.addLayout(h_layout)
         layout.addWidget(self.btn_back_to_main_menu)
 
