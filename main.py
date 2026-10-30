@@ -2,7 +2,7 @@ import sys, sqlite3
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QMessageBox,
                              QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy, QFrame,
-                             QGraphicsDropShadowEffect, QScrollArea)
+                             QGraphicsDropShadowEffect, QScrollArea, QRadioButton, QButtonGroup)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QColor
 from graph_test import get_results
@@ -480,6 +480,7 @@ class SpisokWidget(QWidget):
         self.btn_tests = QPushButton("Тесты")
         self.btn_tests.setObjectName("primary_btn")
         self.btn_tests.setCursor(Qt.PointingHandCursor)
+        self.btn_tests.clicked.connect(self.on_btn_tests_click)
 
         self.btn_graphik = QPushButton("Графики")
         self.btn_graphik.setObjectName("primary_btn")
@@ -502,57 +503,8 @@ class SpisokWidget(QWidget):
     def on_btn_theory_click(self):
         self.switch_callback(4)
 
-
-class GraphikWidget(QWidget):
-    def __init__(self, switch_callback):
-        super().__init__()
-        self.db_path = 'database_logins.db'
-        self.connection = sqlite3.connect(self.db_path)
-        self.cursor = self.connection.cursor()
-        self.switch_callback = switch_callback
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle('Графики о прохождении тестов')
-        layout = build_card(self)
-        layout.addStretch()
-
-        self.label = QLabel("Нажмите на кнопку ниже, чтобы построить график:")
-        self.label.setObjectName("info_text")  # ✅ ново
-        self.label.setAlignment(Qt.AlignCenter)  # ✅ ново
-        self.label.setFixedSize(800, 700)
-        self.label.setWordWrap(True)
-
-        self.btn_back = QPushButton("Вернуться назад <-")
-        self.btn_back.setCursor(Qt.PointingHandCursor)
-        self.btn_back.clicked.connect(self.on_btn_back_click)
-        self.btn_back.setObjectName("back_btn")
-
-        self.btn_to_create = QPushButton("Построить график!")
-        self.btn_to_create.setCursor(Qt.PointingHandCursor)
-        self.btn_to_create.clicked.connect(self.on_btn_to_create_click)
-        self.btn_to_create.setObjectName("primary_btn")
-
-        layout.addWidget(self.btn_back)
-        layout.addWidget(self.label)
-        layout.addWidget(self.btn_to_create)
-
-        layout.addStretch()
-
-    def on_btn_back_click(self):
-        self.label.setText("Нажмите на кнопку ниже, чтобы посторить график:")
-        self.switch_callback(2)
-
-    def on_btn_to_create_click(self):
-        if len(results) >= 2:
-            self.label.setText("График ваших результатов")
-            get_results()
-            pixmap = QPixmap("test_results_light.png")
-            self.label.setPixmap(pixmap)
-            self.label.setScaledContents(True)
-        else:
-            self.label.setText(
-                "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
+    def on_btn_tests_click(self):
+        self.switch_callback(5)
 
 
 class TheoryWidget(QWidget):
@@ -571,7 +523,7 @@ class TheoryWidget(QWidget):
         self.chs_title.setAlignment(Qt.AlignCenter)
 
         self.label_image = QLabel()
-        self.label_image.setFixedSize(800, 600)
+        self.label_image.setFixedSize(1050, 700)
         pixmap = QPixmap(f"IMAGES/{IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][0]}")
         self.label_image.setPixmap(pixmap)
         self.label_image.setScaledContents(True)
@@ -635,6 +587,117 @@ class TheoryWidget(QWidget):
         self.label_image.setScaledContents(True)
 
 
+class TestWidget(QWidget):
+    def __init__(self, switch_callback):
+        super().__init__()
+        self.switch_callback = switch_callback
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('Графики о прохождении тестов')
+        layout = build_card(self)
+        layout.addStretch()
+
+        self.label = QLabel("Тестирование")
+        self.label.setObjectName("subtitle")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setWordWrap(True)
+
+        self.question_label = QLabel("ВОПРОС")
+        self.question_label.setObjectName("title")
+        self.question_label.setAlignment(Qt.AlignCenter)
+
+        self.radio_btn_1 = QRadioButton("Var_1")
+        self.radio_btn_2 = QRadioButton("Var_2")
+        self.radio_btn_3 = QRadioButton("Var_3")
+        self.radio_btn_4 = QRadioButton("Var_4")
+
+        self.radio_btn_group = QButtonGroup()
+        self.radio_btn_group.addButton(self.radio_btn_1, 1)
+        self.radio_btn_group.addButton(self.radio_btn_2, 2)
+        self.radio_btn_group.addButton(self.radio_btn_3, 3)
+        self.radio_btn_group.addButton(self.radio_btn_4, 4)
+
+        self.radio_btn_group.idClicked.connect(self.on_radio_selected)
+
+        self.btn_back = QPushButton("Выйти и завершить тест <-")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
+        self.btn_back.setObjectName("back_btn")
+        self.btn_back.setFixedSize(250, 40)
+
+        layout.addWidget(self.btn_back, alignment=Qt.AlignLeft)
+        layout.addWidget(self.label)
+        layout.addWidget(self.question_label)
+
+        layout.addWidget(self.radio_btn_1)
+        layout.addWidget(self.radio_btn_2)
+        layout.addWidget(self.radio_btn_3)
+        layout.addWidget(self.radio_btn_4)
+
+        layout.addStretch()
+
+    def on_btn_back_click(self):
+        self.switch_callback(2)
+
+    def on_radio_selected(self, button_id):
+        selected_button = self.radio_btn_group.button(button_id)
+        text = selected_button.text()
+        print(f"Пользователь выбрал ID: {button_id}, text: {text}")
+
+
+class GraphikWidget(QWidget):
+    def __init__(self, switch_callback):
+        super().__init__()
+        self.db_path = 'database_logins.db'
+        self.connection = sqlite3.connect(self.db_path)
+        self.cursor = self.connection.cursor()
+        self.switch_callback = switch_callback
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('Графики о прохождении тестов')
+        layout = build_card(self)
+        layout.addStretch()
+
+        self.label = QLabel("Нажмите на кнопку ниже, чтобы построить график:")
+        self.label.setObjectName("info_text")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setFixedSize(1050, 700)
+        self.label.setWordWrap(True)
+
+        self.btn_back = QPushButton("Вернуться назад <-")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
+        self.btn_back.setObjectName("back_btn")
+
+        self.btn_to_create = QPushButton("Построить график!")
+        self.btn_to_create.setCursor(Qt.PointingHandCursor)
+        self.btn_to_create.clicked.connect(self.on_btn_to_create_click)
+        self.btn_to_create.setObjectName("primary_btn")
+
+        layout.addWidget(self.btn_back)
+        layout.addWidget(self.label)
+        layout.addWidget(self.btn_to_create)
+
+        layout.addStretch()
+
+    def on_btn_back_click(self):
+        self.label.setText("Нажмите на кнопку ниже, чтобы посторить график:")
+        self.switch_callback(2)
+
+    def on_btn_to_create_click(self):
+        if len(results) >= 2:
+            self.label.setText("График ваших результатов")
+            get_results()
+            pixmap = QPixmap("test_results_light.png")
+            self.label.setPixmap(pixmap)
+            self.label.setScaledContents(True)
+        else:
+            self.label.setText(
+                "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -654,12 +717,14 @@ class MainWindow(QMainWindow):
         self.spisok_page = SpisokWidget(self.switch_page)
         self.graphik_page = GraphikWidget(self.switch_page)
         self.theory_page = TheoryWidget(self.switch_page)
+        self.test_page = TestWidget(self.switch_page)
 
         self.stack.addWidget(self.login_page)
         self.stack.addWidget(self.reg_page)
         self.stack.addWidget(self.spisok_page)
         self.stack.addWidget(self.graphik_page)
         self.stack.addWidget(self.theory_page)
+        self.stack.addWidget(self.test_page)
 
     def switch_page(self, index):
         if index == 0 or index == 1:
@@ -670,6 +735,8 @@ class MainWindow(QMainWindow):
             self.setWindowTitle('Аналитика прохождения')
         elif index == 4:
             self.setWindowTitle('Теория')
+        elif index == 5:
+            self.setWindowTitle('Тест')
         self.stack.setCurrentIndex(index)
 
 
