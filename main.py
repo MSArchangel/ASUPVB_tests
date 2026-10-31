@@ -240,7 +240,7 @@ QProgressBar {
 QProgressBar::chunk {
     border-radius: 7px;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #00B894, stop:1 #55EFC4);
+                stop:0 #00B894, stop:1 #55EFC4);}
 
 QRadioButton[answerState="correct"] {
     background-color: #E8F8EE;
@@ -265,7 +265,6 @@ QRadioButton[answerState="wrong"]:disabled  { color: #B02A1F; }
 QLabel#feedback { font-size: 22px; font-weight: 800; background: transparent; }
 QLabel#feedback[state="ok"]  { color: #27AE60; }
 QLabel#feedback[state="bad"] { color: #D63031; }
-}
 """
 
 
@@ -706,6 +705,13 @@ class TestWidget(QWidget):
         widget.setProperty("answerState", state)
         self._refresh_style(widget)
 
+    def clear_selection(self):
+        self.radio_btn_group.setExclusive(False)
+        for btn in self.radio_buttons:
+            btn.setChecked(False)
+            btn.setAutoExclusive(False)
+        self.radio_btn_group.setExclusive(True)
+
     def start_test(self):
         self.questions = build_questions()
         self.current, self.correct_count = 0, 0
@@ -719,6 +725,7 @@ class TestWidget(QWidget):
         self.feedback.setText("")
         self.feedback.setProperty("state", "")
         self._refresh_style(self.feedback)
+        self.clear_selection()
         for i, btn in enumerate(self.radio_buttons):
             btn.setText(q["options"][i])
             btn.setChecked(False)
@@ -737,17 +744,17 @@ class TestWidget(QWidget):
 
         if button_id - 1 == q["correct"]:
             self.correct_count += 1
-            self._set_state(chosen, "correct")  # ✅ светло-зелёный
+            self._set_state(chosen, "correct")
             self.feedback.setText("ПРАВИЛЬНО!")
             self.feedback.setProperty("state", "ok")
         else:
-            self._set_state(chosen, "wrong")  # ❌ светло-красный
+            self._set_state(chosen, "wrong")
             self._set_state(self.radio_btn_group.button(q["correct"] + 1), "correct")
             self.feedback.setText("НЕПРАВИЛЬНО!")
             self.feedback.setProperty("state", "bad")
         self._refresh_style(self.feedback)
 
-        QTimer.singleShot(1500, self.next_question)  # пауза на осмысление
+        QTimer.singleShot(3000, self.next_question)
 
     def next_question(self):
         self.current += 1
@@ -763,6 +770,7 @@ class TestWidget(QWidget):
         for btn in self.radio_buttons:
             btn.setText("")
             btn.setEnabled(False)
+            btn.hide()
         self.feedback.setText("")
         self.save_result(total)
 
