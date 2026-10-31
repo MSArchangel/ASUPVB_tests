@@ -8,6 +8,7 @@ from PyQt5.QtGui import QPixmap, QColor
 from graph_test import get_results
 from CHS_for_theory import EMERGENCY_DATA
 from test_question import build_questions
+from password_check import check_password
 
 user_id, results, IMAGES, SCHETCHIK_FOR_IMAGES = [None], [None], EMERGENCY_DATA, [0]
 GLOBAL_STYLESHEET = """
@@ -488,7 +489,7 @@ class RegistrationWidget(QWidget):
         connection = sqlite3.connect(db_path)
         cursor = connection.cursor()
 
-        if (name_from_edit and password_from_edit) and len(password_from_edit) >= 6:
+        if (name_from_edit and password_from_edit) and check_password(password_from_edit, 6):
             result = QMessageBox.warning(self, "Предупреждение",
                                          "Вы уверены, что хотите создать учётную запись с введенными данными?",
                                          QMessageBox.Yes | QMessageBox.No)
@@ -505,7 +506,7 @@ class RegistrationWidget(QWidget):
             else:
                 pass
         else:
-            QMessageBox.warning(self, 'Ошибка входа', 'Пожалуйста, заполните все поля!')
+            QMessageBox.warning(self, 'Ошибка входа', 'Пожалуйста, заполните все поля и проверьте правильность ввода пароля!\nНеобходима одна большая, одна маленькая английские буквы и спец.символ (за исключением ; " )!')
             if not name_from_edit:
                 self.input_name.setFocus()
             elif not password_from_edit:
