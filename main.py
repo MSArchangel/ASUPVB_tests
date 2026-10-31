@@ -3,10 +3,11 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QMessageBox,
                              QMainWindow, QStackedWidget, QSpacerItem, QSizePolicy, QFrame,
                              QGraphicsDropShadowEffect, QScrollArea, QRadioButton, QButtonGroup)
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap, QColor
 from graph_test import get_results
 from CHS_for_theory import EMERGENCY_DATA
+from test_question import build_questions
 
 user_id, results, IMAGES, SCHETCHIK_FOR_IMAGES = [None], [None], EMERGENCY_DATA, [0]
 GLOBAL_STYLESHEET = """
@@ -66,7 +67,6 @@ QLabel#footer_text {
     margin-top: 10px;
 }
 
-/* ── Текст: тело теории (панель с акцентной полосой) ── */
 QLabel#theory_text {
     font-size: 15px;
     color: #3D4C59;
@@ -77,14 +77,16 @@ QLabel#theory_text {
     padding: 18px 22px;
 }
 
-/* ── Текст: подсказки и заглушки (графики и т.п.) ── */
 QLabel#info_text {
     font-size: 16px;
     color: #636E72;
     background: transparent;
 }
 
-/* ── Диалоговые окна QMessageBox в общем стиле ── */
+QLabel#image_label{
+    background-color: #FFFFFF;
+}
+
 QMessageBox {
     background-color: #FFFFFF;
 }
@@ -168,7 +170,6 @@ QPushButton#nav_btn:hover {
 }
 QPushButton#nav_btn:pressed { background-color: #D4E9FB; }
 
-
 QPushButton#back_btn {
     background: transparent;
     border: none;
@@ -235,12 +236,59 @@ QProgressBar {
     font-size: 11px;
     color: #2D3436;
 }
+
 QProgressBar::chunk {
     border-radius: 7px;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #00B894, stop:1 #55EFC4);
+                stop:0 #00B894, stop:1 #55EFC4);}
+
+QRadioButton[answerState="correct"] {
+    background-color: #E8F8EE;
+    border: 1.5px solid #27AE60;
+    color: #1E7E34;
+    font-weight: 600;
 }
+
+QRadioButton[answerState="wrong"] {
+    background-color: #FDECEA;
+    border: 1.5px solid #D63031;
+    color: #B02A1F;
+    font-weight: 600;
+}
+
+QRadioButton[answerState="correct"]::indicator { border-color: #27AE60; }
+QRadioButton[answerState="wrong"]::indicator  { border-color: #D63031; }
+QRadioButton:disabled { color: #90A4AE; }
+QRadioButton[answerState="correct"]:disabled { color: #1E7E34; }
+QRadioButton[answerState="wrong"]:disabled  { color: #B02A1F; }
+
+QLabel#feedback { font-size: 22px; font-weight: 800; background: transparent; }
+QLabel#feedback[state="ok"]  { color: #27AE60; }
+QLabel#feedback[state="bad"] { color: #D63031; }
 """
+
+
+class ScaledImageLabel(QLabel):
+    def __init__(self, pixmap=None, parent=None):
+        super().__init__(parent)
+        self._pixmap = pixmap or QPixmap()
+        self.setAlignment(Qt.AlignCenter)
+        self.setMinimumSize(240, 180)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._rescale()
+
+    def set_image(self, pixmap: QPixmap):
+        self._pixmap = pixmap
+        self._rescale()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._rescale()
+
+    def _rescale(self):
+        if not self._pixmap.isNull():
+            self.setPixmap(self._pixmap.scaled(
+                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 
 def build_card(parent: QWidget) -> QVBoxLayout:
@@ -262,6 +310,15 @@ def build_card(parent: QWidget) -> QVBoxLayout:
 
     outer.addWidget(card)
     return inner
+
+
+def fit_window_to_screen(window, width_ratio=0.55, height_ratio=0.88,
+                         min_size=(760, 640), max_size=(1200, 1080)):
+    screen = QApplication.primaryScreen().availableGeometry()
+    w = max(min_size[0], min(int(screen.width() * width_ratio), max_size[0]))
+    h = max(min_size[1], min(int(screen.height() * height_ratio), max_size[1]))
+    window.resize(w, h)
+    window.move(screen.center() - window.rect().center())
 
 
 SECTION_COLORS = {
@@ -510,25 +567,28 @@ class SpisokWidget(QWidget):
 class TheoryWidget(QWidget):
     def __init__(self, switch_callback):
         super().__init__()
-        self.init_ui()
         self.switch_callback = switch_callback
+        self.init_ui()
+
+    @staticmethod
+    def current_index() -> int:
+        return SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)
 
     def init_ui(self):
         self.setWindowTitle('Теория')
         layout = build_card(self)
-        layout.addStretch()
 
-        self.chs_title = QLabel(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
+        index = self.current_index()
+
+        self.chs_title = QLabel(IMAGES[index][2])
         self.chs_title.setObjectName("title")
         self.chs_title.setAlignment(Qt.AlignCenter)
 
-        self.label_image = QLabel()
-        self.label_image.setFixedSize(1050, 700)
-        pixmap = QPixmap(f"IMAGES/{IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][0]}")
-        self.label_image.setPixmap(pixmap)
-        self.label_image.setScaledContents(True)
+        self.label_image = ScaledImageLabel()
+        self.label_image.set_image(QPixmap(f"IMAGES/{IMAGES[index][0]}"))
+        self.label_image.setObjectName('image_label')
 
-        self.text_label = QLabel(pretty_theory_html(IMAGES[SCHETCHIK_FOR_IMAGES[0]][1]))
+        self.text_label = QLabel(pretty_theory_html(IMAGES[index][1]))
         self.text_label.setObjectName("theory_text")
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignJustify)
@@ -536,172 +596,283 @@ class TheoryWidget(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.text_label)
-        self.scroll.setFixedHeight(320)
+        self.scroll.setMinimumHeight(200)
 
         self.btn_next = QPushButton("->")
-        self.btn_next.setCursor(Qt.PointingHandCursor)
-        self.btn_next.clicked.connect(self.on_btn_next_click)
-        self.btn_next.setFixedSize(60, 30)
         self.btn_next.setObjectName("nav_btn")
+        self.btn_next.setCursor(Qt.PointingHandCursor)
+        self.btn_next.setFixedSize(60, 30)
+        self.btn_next.clicked.connect(self.on_btn_next_click)
 
         self.btn_back = QPushButton("<-")
-        self.btn_back.setCursor(Qt.PointingHandCursor)
-        self.btn_back.clicked.connect(self.on_btn_back_click)
-        self.btn_back.setFixedSize(60, 30)
         self.btn_back.setObjectName("nav_btn")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
+        self.btn_back.setFixedSize(60, 30)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
 
         self.btn_back_to_main_menu = QPushButton("Вернуться назад <-")
+        self.btn_back_to_main_menu.setObjectName("back_btn")
         self.btn_back_to_main_menu.setCursor(Qt.PointingHandCursor)
         self.btn_back_to_main_menu.clicked.connect(self.on_btn_back_to_main_menu_click)
-        self.btn_back_to_main_menu.setObjectName("back_btn")
+        self.btn_back_to_main_menu.setFixedSize(250, 40)
 
-        h_layout = QHBoxLayout(self)
+        h_layout = QHBoxLayout()
+        h_layout.addStretch()
         h_layout.addWidget(self.btn_back)
         h_layout.addWidget(self.btn_next)
+        h_layout.addStretch()
 
+        layout.addWidget(self.btn_back_to_main_menu, alignment=Qt.AlignLeft)
         layout.addWidget(self.chs_title)
-        layout.addWidget(self.label_image)
-        layout.addWidget(self.scroll)
+        layout.addWidget(self.label_image, stretch=4)
+        layout.addWidget(self.scroll, stretch=2)
         layout.addLayout(h_layout)
-        layout.addWidget(self.btn_back_to_main_menu)
-
-        layout.addStretch()
-
-    def on_btn_back_to_main_menu_click(self):
-        self.switch_callback(2)
 
     def on_btn_next_click(self):
         SCHETCHIK_FOR_IMAGES[0] += 1
-        pixmap = QPixmap(f"IMAGES/{IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][0]}")
-        self.chs_title.setText(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
-        self.text_label.setText(IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][1])
-        self.label_image.setPixmap(pixmap)
-        self.label_image.setScaledContents(True)
+        self.show_slide()
 
     def on_btn_back_click(self):
         SCHETCHIK_FOR_IMAGES[0] -= 1
-        pixmap = QPixmap(f"IMAGES/{IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][0]}")
-        self.chs_title.setText(IMAGES[SCHETCHIK_FOR_IMAGES[0] % len(IMAGES)][2])
-        self.text_label.setText(IMAGES[abs(SCHETCHIK_FOR_IMAGES[0]) % len(IMAGES)][1])
-        self.label_image.setPixmap(pixmap)
-        self.label_image.setScaledContents(True)
+        self.show_slide()
+
+    def show_slide(self):
+        index = self.current_index()
+        self.chs_title.setText(IMAGES[index][2])
+        self.label_image.set_image(QPixmap(f"IMAGES/{IMAGES[index][0]}"))
+        self.text_label.setText(pretty_theory_html(IMAGES[index][1]))
+        self.scroll.verticalScrollBar().setValue(0)
+
+    def on_btn_back_to_main_menu_click(self):
+        self.switch_callback(2)
 
 
 class TestWidget(QWidget):
     def __init__(self, switch_callback):
         super().__init__()
         self.switch_callback = switch_callback
+        self.questions, self.current, self.correct_count = [], 0, 0
+        self.answered = False
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle('Графики о прохождении тестов')
+        self.setWindowTitle('Тестирование')
         layout = build_card(self)
-        layout.addStretch()
-
-        self.label = QLabel("Тестирование")
-        self.label.setObjectName("subtitle")
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setWordWrap(True)
-
-        self.question_label = QLabel("ВОПРОС")
-        self.question_label.setObjectName("title")
-        self.question_label.setAlignment(Qt.AlignCenter)
-
-        self.radio_btn_1 = QRadioButton("Var_1")
-        self.radio_btn_2 = QRadioButton("Var_2")
-        self.radio_btn_3 = QRadioButton("Var_3")
-        self.radio_btn_4 = QRadioButton("Var_4")
-
-        self.radio_btn_group = QButtonGroup()
-        self.radio_btn_group.addButton(self.radio_btn_1, 1)
-        self.radio_btn_group.addButton(self.radio_btn_2, 2)
-        self.radio_btn_group.addButton(self.radio_btn_3, 3)
-        self.radio_btn_group.addButton(self.radio_btn_4, 4)
-
-        self.radio_btn_group.idClicked.connect(self.on_radio_selected)
 
         self.btn_back = QPushButton("Выйти и завершить тест <-")
-        self.btn_back.setCursor(Qt.PointingHandCursor)
-        self.btn_back.clicked.connect(self.on_btn_back_click)
         self.btn_back.setObjectName("back_btn")
+        self.btn_back.setCursor(Qt.PointingHandCursor)
         self.btn_back.setFixedSize(250, 40)
+        self.btn_back.clicked.connect(self.on_btn_back_click)
+
+        self.progress_label = QLabel("")
+        self.progress_label.setObjectName("subtitle")
+        self.progress_label.setAlignment(Qt.AlignCenter)
+
+        self.question_label = QLabel("")
+        self.question_label.setObjectName("title")
+        self.question_label.setAlignment(Qt.AlignCenter)
+        self.question_label.setWordWrap(True)
+
+        self.radio_buttons = []
+        self.radio_btn_group = QButtonGroup(self)
+        for i in range(1, 5):
+            btn = QRadioButton("")
+            btn.setCursor(Qt.PointingHandCursor)
+            self.radio_btn_group.addButton(btn, i)
+            self.radio_buttons.append(btn)
+        self.radio_btn_group.idClicked.connect(self.on_radio_selected)
+
+        self.feedback = QLabel("")
+        self.feedback.setObjectName("feedback")
+        self.feedback.setAlignment(Qt.AlignCenter)
 
         layout.addWidget(self.btn_back, alignment=Qt.AlignLeft)
-        layout.addWidget(self.label)
-        layout.addWidget(self.question_label)
-
-        layout.addWidget(self.radio_btn_1)
-        layout.addWidget(self.radio_btn_2)
-        layout.addWidget(self.radio_btn_3)
-        layout.addWidget(self.radio_btn_4)
-
         layout.addStretch()
+        layout.addWidget(self.progress_label)
+        layout.addWidget(self.question_label)
+        for btn in self.radio_buttons:
+            layout.addWidget(btn)
+        layout.addWidget(self.feedback)
+        layout.addStretch()
+
+    @staticmethod
+    def _refresh_style(widget):
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+
+    def _set_state(self, widget, state):
+        widget.setProperty("answerState", state)
+        self._refresh_style(widget)
+
+    def clear_selection(self):
+        self.radio_btn_group.setExclusive(False)
+        for btn in self.radio_buttons:
+            btn.setChecked(False)
+            btn.setAutoExclusive(False)
+        self.radio_btn_group.setExclusive(True)
+
+    def start_test(self):
+        self.questions = build_questions()
+        self.current, self.correct_count = 0, 0
+        self.show_question()
+
+    def show_question(self):
+        self.answered = False
+        q = self.questions[self.current]
+        self.progress_label.setText(f"Вопрос {self.current + 1} из {len(self.questions)}")
+        self.question_label.setText(q["question"])
+        self.feedback.setText("")
+        self.feedback.setProperty("state", "")
+        self._refresh_style(self.feedback)
+        self.clear_selection()
+        for i, btn in enumerate(self.radio_buttons):
+            btn.setText(q["options"][i])
+            btn.setChecked(False)
+            btn.setEnabled(True)
+            self._set_state(btn, "")
+
+    def on_radio_selected(self, button_id):
+        if self.answered:
+            return
+        self.answered = True
+        q = self.questions[self.current]
+        chosen = self.radio_btn_group.button(button_id)
+
+        for btn in self.radio_buttons:
+            btn.setEnabled(False)  # блокируем до следующего вопроса
+
+        if button_id - 1 == q["correct"]:
+            self.correct_count += 1
+            self._set_state(chosen, "correct")
+            self.feedback.setText("ПРАВИЛЬНО!")
+            self.feedback.setProperty("state", "ok")
+        else:
+            self._set_state(chosen, "wrong")
+            self._set_state(self.radio_btn_group.button(q["correct"] + 1), "correct")
+            self.feedback.setText("НЕПРАВИЛЬНО!")
+            self.feedback.setProperty("state", "bad")
+        self._refresh_style(self.feedback)
+
+        QTimer.singleShot(3000, self.next_question)
+
+    def next_question(self):
+        self.current += 1
+        if self.current < len(self.questions):
+            self.show_question()
+        else:
+            self.finish_test()
+
+    def finish_test(self):
+        total = len(self.questions)
+        self.progress_label.setText("Тест завершён!")
+        self.question_label.setText(f"Результат: {self.correct_count} из {total}")
+        for btn in self.radio_buttons:
+            btn.setText("")
+            btn.setEnabled(False)
+            btn.hide()
+        self.feedback.setText("")
+        self.save_result(total)
+
+    def save_result(self, total):
+        import datetime
+        connection = sqlite3.connect('database_logins.db')
+        cursor = connection.cursor()
+        row = cursor.execute(
+            "SELECT results, dates FROM loggins WHERE id = ?", (user_id[0],)).fetchone()
+        results_str = ((row[0] or "").strip() + f" {self.correct_count}").strip()
+        dates_str = ((row[1] or "").strip() +
+                     f" {datetime.datetime.now():%d.%m}").strip()
+        cursor.execute("UPDATE loggins SET results = ?, dates = ? WHERE id = ?",
+                       (results_str, dates_str, user_id[0]))
+        connection.commit()
+        connection.close()
 
     def on_btn_back_click(self):
         self.switch_callback(2)
 
-    def on_radio_selected(self, button_id):
-        selected_button = self.radio_btn_group.button(button_id)
-        text = selected_button.text()
-        print(f"Пользователь выбрал ID: {button_id}, text: {text}")
-
 
 class GraphikWidget(QWidget):
+    PLACEHOLDER = "Нажмите на кнопку ниже, чтобы построить график:"
+    NO_DATA = ("Пройдите хотя бы два теста, чтобы увидеть график "
+               "Ваших результатов.\nЖелаем успехов!")
+
     def __init__(self, switch_callback):
         super().__init__()
         self.db_path = 'database_logins.db'
         self.connection = sqlite3.connect(self.db_path)
         self.cursor = self.connection.cursor()
         self.switch_callback = switch_callback
+        self._graph_pixmap = None
         self.init_ui()
 
     def init_ui(self):
         self.setWindowTitle('Графики о прохождении тестов')
         layout = build_card(self)
-        layout.addStretch()
-
-        self.label = QLabel("Нажмите на кнопку ниже, чтобы построить график:")
-        self.label.setObjectName("info_text")
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setFixedSize(1050, 700)
-        self.label.setWordWrap(True)
 
         self.btn_back = QPushButton("Вернуться назад <-")
+        self.btn_back.setObjectName("back_btn")
         self.btn_back.setCursor(Qt.PointingHandCursor)
         self.btn_back.clicked.connect(self.on_btn_back_click)
-        self.btn_back.setObjectName("back_btn")
+        self.btn_back.setFixedSize(250, 40)
+
+        self.label = QLabel(self.PLACEHOLDER)
+        self.label.setObjectName("info_text")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setWordWrap(True)
+        self.label.setMinimumSize(400, 350)
+        self.label.setSizePolicy(QSizePolicy.Expanding,
+                                 QSizePolicy.Expanding)
 
         self.btn_to_create = QPushButton("Построить график!")
+        self.btn_to_create.setObjectName("primary_btn")
         self.btn_to_create.setCursor(Qt.PointingHandCursor)
         self.btn_to_create.clicked.connect(self.on_btn_to_create_click)
-        self.btn_to_create.setObjectName("primary_btn")
 
-        layout.addWidget(self.btn_back)
-        layout.addWidget(self.label)
+        layout.addWidget(self.btn_back, alignment=Qt.AlignLeft)
+        layout.addWidget(self.label, stretch=1)
         layout.addWidget(self.btn_to_create)
 
-        layout.addStretch()
+    def _apply_graph(self):
+        if self._graph_pixmap is None or self._graph_pixmap.isNull():
+            return
+        if self.label.width() <= 0 or self.label.height() <= 0:
+            return
+        self.label.setPixmap(self._graph_pixmap.scaled(
+            self.label.size(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_graph()
 
     def on_btn_back_click(self):
-        self.label.setText("Нажмите на кнопку ниже, чтобы посторить график:")
+        self._graph_pixmap = None
+        self.label.setText(self.PLACEHOLDER)
         self.switch_callback(2)
 
     def on_btn_to_create_click(self):
         if len(results) >= 2:
-            self.label.setText("График ваших результатов")
-            get_results()
+            get_results(user_id[0])
             pixmap = QPixmap("test_results_light.png")
-            self.label.setPixmap(pixmap)
-            self.label.setScaledContents(True)
+            if pixmap.isNull():
+                self.label.setText("Не удалось загрузить изображение графика.")
+                return
+            self._graph_pixmap = pixmap
+            self._apply_graph()
         else:
-            self.label.setText(
-                "Пройдите хотя бы два теста, чтобы увидеть график Ваших результатов.\nЖелаем успехов!")
+            self._graph_pixmap = None
+            self.label.setText(self.NO_DATA)
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.resize(850, 1000)
+
+        fit_window_to_screen(self)
+        self.setMinimumSize(720, 620)
+
         self.setWindowTitle("Авторизация")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -737,10 +908,13 @@ class MainWindow(QMainWindow):
             self.setWindowTitle('Теория')
         elif index == 5:
             self.setWindowTitle('Тест')
+            self.test_page.start_test()
         self.stack.setCurrentIndex(index)
 
 
 if __name__ == '__main__':
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(GLOBAL_STYLESHEET)
