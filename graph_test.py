@@ -4,32 +4,12 @@ import plotly.graph_objects as go
 import sqlite3, datetime
 
 
-def get_results():
+def get_results(login_id):
     db_path = 'database_logins.db'
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
-
-    date_now = str(datetime.datetime.now().date()).split('-')[-1] + "." + \
-               str(datetime.datetime.now().date()).split('-')[-2]
-
     arr = cursor.execute(
-        f'SELECT results, dates FROM loggins WHERE login ="admin" AND password = "Admin123"').fetchall()
-    results = [int(x) for x in arr[0][0].split()]
-    results_str = ''
-    dates = arr[0][1].split()
-    dates_str = ''
-    for date in dates:
-        dates_str += date + " "
-    for result in results:
-        results_str += str(result) + " "
-    cursor.execute(
-        f'UPDATE loggins SET results = "{results_str + " " + str(random.randint(1, 20))}" WHERE login = "admin"')
-    cursor.execute(
-        f'UPDATE loggins SET dates = "{dates_str + " " + date_now}" WHERE login = "admin"')
-    connection.commit()
-
-    arr = cursor.execute(
-        f'SELECT results, dates FROM loggins WHERE login ="admin" AND password = "Admin123"').fetchall()
+        f'SELECT results, dates FROM loggins WHERE id ="{login_id}"').fetchall()
     results = [int(x) for x in arr[0][0].split()]
     dates = arr[0][1].split()
 
@@ -95,3 +75,5 @@ def get_results():
         width=1100, height=650, )
 
     fig.write_image("test_results_light.png", scale=2)
+
+get_results(35)
