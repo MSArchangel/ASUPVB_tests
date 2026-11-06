@@ -60,7 +60,10 @@ def _make_question(question: str, correct: str, pool: list) -> dict:
     return {"question": question, "options": options, "correct": options.index(correct)}
 
 
-def build_questions(data=EMERGENCY_DATA) -> list:
+MAX_QUESTIONS = 15
+
+
+def build_questions(data=EMERGENCY_DATA, target: int = MAX_QUESTIONS):
     questions = []
     for idx, (_, text, title) in enumerate(data):
         pools_d = [d for j, (_, t, _) in enumerate(data) if j != idx for d in _dangers(t)]
@@ -76,6 +79,6 @@ def build_questions(data=EMERGENCY_DATA) -> list:
                 f"ЧС «{title}»: что является ПРЕДВЕСТНИКОМ аварии?", premons[0], pools_p))
         if steps:
             questions.append(_make_question(
-                f"ЧС «{title}»: какое действие personnel ПЕРВОЕ по порядку?", steps[0], pools_s))
+                f"ЧС «{title}»: какое ДЕЙСТВИЕ необходимо выполнить персоналу первостепенно?", steps[0], pools_s))
     random.shuffle(questions)
-    return questions
+    return questions[:target]

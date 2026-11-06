@@ -20,8 +20,8 @@ def get_results(login_id):
         "correct": results,  # правильных ответов
     }
 
-    TOTAL = 20
-    PASS = 15
+    TOTAL = 15
+    PASS = 12
 
     df = pd.DataFrame(data)
     df["label"] = df["attempt"] + "<br>" + df["date"]  # подпись + дата

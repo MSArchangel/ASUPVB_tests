@@ -506,7 +506,8 @@ class RegistrationWidget(QWidget):
             else:
                 pass
         else:
-            QMessageBox.warning(self, 'Ошибка входа', 'Пожалуйста, заполните все поля и проверьте правильность ввода пароля!\nНеобходима одна большая, одна маленькая английские буквы и спец.символ (за исключением ; " )!')
+            QMessageBox.warning(self, 'Ошибка входа',
+                                'Пожалуйста, заполните все поля и проверьте правильность ввода пароля!\nНеобходима одна большая, одна маленькая английские буквы и спец.символ (за исключением ; " )!')
             if not name_from_edit:
                 self.input_name.setFocus()
             elif not password_from_edit:
@@ -922,4 +923,3 @@ if __name__ == '__main__':
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
-
